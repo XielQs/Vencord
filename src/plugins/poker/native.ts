@@ -4,15 +4,41 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+import { RendererSettings } from "@main/settings";
 import { BrowserWindow } from "electron";
 
-const INTENSITY = 5;
-const DURATION = 500;
+interface PokerSettings {
+  enabled: boolean;
+  focusOnPoke: boolean;
+  intensity: number;
+  duration: number;
+}
 
-export async function pokeWindow() {
+function getWindow() {
   // trick to get the actual discord window
   const currentWindow = BrowserWindow.getAllWindows().find(win => win.eventNames().includes("page-title-updated")) ?? BrowserWindow.getAllWindows()[0];
+  if (!currentWindow || currentWindow.isDestroyed()) return null;
+  return currentWindow;
+}
+
+export function shouldWait() {
+  const currentWindow = getWindow();
+  if (!currentWindow) return false;
+  return currentWindow.isMaximized() || currentWindow.isFullScreen() || currentWindow.isMinimized();
+}
+
+export function pokeWindow() {
+  const settings = RendererSettings.store.plugins?.PokeR as PokerSettings;
+  if (!settings?.enabled) return;
+
+  const currentWindow = getWindow();
   if (!currentWindow) return;
+
+  if (settings.focusOnPoke) {
+    currentWindow.show();
+    currentWindow.focus();
+  }
+
   const originalPosition = currentWindow.getPosition();
   const startTime = Date.now();
   let shakeIntervalId: NodeJS.Timeout | null = null;
@@ -21,7 +47,7 @@ export async function pokeWindow() {
     const elapsedTime = Date.now() - startTime;
 
     // stop poking when time is elapsed or window is closed
-    if (elapsedTime >= DURATION || !currentWindow || currentWindow.isDestroyed()) {
+    if (elapsedTime >= settings.duration || !currentWindow || currentWindow.isDestroyed()) {
       clearInterval(shakeIntervalId!);
       // restore original position
       // if the window is closed, we don't need to restore the position
@@ -32,8 +58,8 @@ export async function pokeWindow() {
     }
 
     // calculate random delta for x and y
-    const deltaX = Math.round((Math.random() * 2 - 1) * INTENSITY);
-    const deltaY = Math.round((Math.random() * 2 - 1) * INTENSITY);
+    const deltaX = Math.round((Math.random() * 2 - 1) * settings.intensity);
+    const deltaY = Math.round((Math.random() * 2 - 1) * settings.intensity);
 
     // calculate new position
     const newX = originalPosition[0] + deltaX;

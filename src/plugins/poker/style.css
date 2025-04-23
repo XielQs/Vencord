@@ -1,0 +1,4 @@
+[class^="footer__"] {
+  flex-direction: row;
+  gap: 5px;
+}
