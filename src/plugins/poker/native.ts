@@ -16,7 +16,7 @@ interface PokerSettings {
 
 function getWindow() {
   // trick to get the actual discord window
-  const currentWindow = BrowserWindow.getAllWindows().find(win => win.eventNames().includes("page-title-updated")) ?? BrowserWindow.getAllWindows()[0];
+  const currentWindow = BrowserWindow.getAllWindows().find(win => win.eventNames().includes("page-title-updated")) ?? BrowserWindow.getAllWindows()?.[0];
   if (!currentWindow || currentWindow.isDestroyed()) return null;
   return currentWindow;
 }
@@ -39,12 +39,17 @@ export function pokeWindow() {
     currentWindow.focus();
   }
 
-  const originalPosition = currentWindow.getPosition();
+  const [posX, posY] = currentWindow.getPosition();
   const startTime = Date.now();
   let shakeIntervalId: NodeJS.Timeout | null = null;
 
   shakeIntervalId = setInterval(() => {
     const elapsedTime = Date.now() - startTime;
+
+    if (!currentWindow) {
+      clearInterval(shakeIntervalId!);
+      return;
+    }
 
     // stop poking when time is elapsed or window is closed
     if (elapsedTime >= settings.duration || !currentWindow || currentWindow.isDestroyed()) {
@@ -52,7 +57,7 @@ export function pokeWindow() {
       // restore original position
       // if the window is closed, we don't need to restore the position
       if (currentWindow && !currentWindow.isDestroyed()) {
-        currentWindow.setPosition(originalPosition[0], originalPosition[1]);
+        currentWindow.setPosition(posX, posY);
       }
       return;
     }
@@ -62,8 +67,8 @@ export function pokeWindow() {
     const deltaY = Math.round((Math.random() * 2 - 1) * settings.intensity);
 
     // calculate new position
-    const newX = originalPosition[0] + deltaX;
-    const newY = originalPosition[1] + deltaY;
+    const newX = posX + deltaX;
+    const newY = posY + deltaY;
 
     // set new position
     if (currentWindow && !currentWindow.isDestroyed()) {
