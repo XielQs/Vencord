@@ -28,15 +28,23 @@ export function shouldWait() {
 }
 
 export function pokeWindow() {
-  const settings = RendererSettings.store.plugins?.PokeR as PokerSettings;
+  const settings = RendererSettings.store.plugins?.PokeR as PokerSettings | undefined;
   if (!settings?.enabled) return;
+
+  const intensity = settings?.intensity ?? 5;
+  const duration = settings?.duration ?? 500;
 
   const currentWindow = getWindow();
   if (!currentWindow) return;
 
   if (settings.focusOnPoke) {
-    currentWindow.show();
-    currentWindow.focus();
+    try {
+      currentWindow.show();
+      currentWindow.focus();
+    } catch {
+      // window is closed
+      return;
+    }
   }
 
   const [posX, posY] = currentWindow.getPosition();
@@ -44,36 +52,45 @@ export function pokeWindow() {
   let shakeIntervalId: NodeJS.Timeout | null = null;
 
   shakeIntervalId = setInterval(() => {
-    const elapsedTime = Date.now() - startTime;
-
-    if (!currentWindow) {
+    if (!currentWindow || currentWindow.isDestroyed()) {
       clearInterval(shakeIntervalId!);
       return;
     }
 
+    const elapsedTime = Date.now() - startTime;
+
     // stop poking when time is elapsed or window is closed
-    if (elapsedTime >= settings.duration || !currentWindow || currentWindow.isDestroyed()) {
+    if (elapsedTime >= duration || !currentWindow || currentWindow.isDestroyed()) {
       clearInterval(shakeIntervalId!);
       // restore original position
       // if the window is closed, we don't need to restore the position
-      if (currentWindow && !currentWindow.isDestroyed()) {
-        currentWindow.setPosition(posX, posY);
+      try {
+        if (currentWindow && !currentWindow.isDestroyed()) {
+          currentWindow.setPosition(posX, posY);
+        }
+      } catch {
+        // idk
       }
       return;
     }
 
     // calculate random delta for x and y
-    const deltaX = Math.round((Math.random() * 2 - 1) * settings.intensity);
-    const deltaY = Math.round((Math.random() * 2 - 1) * settings.intensity);
+    const deltaX = Math.round((Math.random() * 2 - 1) * intensity);
+    const deltaY = Math.round((Math.random() * 2 - 1) * intensity);
 
     // calculate new position
     const newX = posX + deltaX;
     const newY = posY + deltaY;
 
-    // set new position
-    if (currentWindow && !currentWindow.isDestroyed()) {
-      currentWindow.setPosition(newX, newY);
-    } else {
+    try {
+      // set new position
+      if (currentWindow && !currentWindow.isDestroyed()) {
+        currentWindow.setPosition(newX, newY);
+      } else {
+        // if the window is closed, we don't need to restore the position
+        clearInterval(shakeIntervalId!);
+      }
+    } catch {
       // if the window is closed, we don't need to restore the position
       clearInterval(shakeIntervalId!);
     }

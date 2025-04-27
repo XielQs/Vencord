@@ -132,7 +132,7 @@ export default definePlugin({
     {
       find: "#{intl::MESSAGE_EDITED}",
       replacement: {
-        match: /(\("div",\{id:.+?children:\[.{0,20})(\i\((\i),\i\)),/,
+        match: /(\("div",\{id:.+?children:\[.*?)(\i\((\i),\i\)),/,
         replace: "$1 $self.renderMessage($3, $2),"
       }
     },
